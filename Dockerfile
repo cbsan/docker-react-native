@@ -24,15 +24,20 @@ RUN set -xe \
 		gcc  \
 		unzip " \
 	&& INSTALL="\
-		openjdk8-jre=8.181.13-r0 " \
+		openjdk8=8.181.13-r0 \
+    bash " \
 	&& apk add --no-cache --virtual .persistent-deps $INSTALL_TEMP $INSTALL \
 	&& NPM_INSTALL_GLOBAL="\
-	yarn \
-	react-native" \
+	  yarn \
+	  react-native-cli" \
 	&& npm i -g $NPM_INSTALL_GLOBAL \
 	&& curl -fsSL $URL_SDK_ANDROID -o /tmp/sdk.zip \
 	&& mkdir -p $ANDROID_HOME \
 	&& unzip /tmp/sdk.zip -d $ANDROID_HOME \
 	&& yes | $ANDROID_TOOLS/bin/sdkmanager  "platform-tools" "platforms;android-27" "build-tools;27.0.3" \
-	&& rm -rf /tmp/* \
-	&& apk del .persistent-deps $INSTALL_TEMP
+  && chmod a+x -R $ANDROID_HOME \
+	&& rm -rf /tmp/* && apk del $INSTALL_TEMP
+
+WORKDIR /usr/src
+
+
