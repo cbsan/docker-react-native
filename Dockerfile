@@ -1,26 +1,38 @@
-FROM ubuntu:18.10
+FROM node:alpine
+
+LABEL authors="Raí V. Adriano <raivieiraadriano92@gmail.com>, \ 
+	Cristian B. Santos<cbsan.dev@gmail.com>, \
+	Luiz C. R. Correa<luiz.correa.dev@gmail.com>"
 
 ENV ANDROID_HOME=/usr/lib/android-sdk
-ENV PATH=$PATH:$ANDROID_HOME/tools
-ENV PATH=$PATH:$ANDROID_HOME/platform-tools
+ENV ANDROID_TOOLS=$ANDROID_HOME/tools
+ENV ANDROID_PLATFORM_TOOLS=$ANDROID_HOME/platform-tools
+ENV JAVA_HOME=/usr/lib/jvm/java-1.8-openjdk
+ENV PATH=$PATH:$ANDROID_TOOLS:$ANDROID_PLATFORM_TOOLS:$JAVA_HOME/jre/bin
+ENV URL_SDK_ANDROID=https://dl.google.com/android/repository/sdk-tools-linux-4333796.zip
 
-RUN apt update \
-	&& apt upgrade -y \
-	&& apt install -y software-properties-common curl
-
-RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - \
-	&& apt install -y nodejs \
-	&& npm i -g react-native-cli yarn
-
-RUN add-apt-repository -y ppa:openjdk-r/ppa \
-	&& apt update \
-	&& apt install -y openjdk-8-jdk \
-	&& apt install -y gcc-multilib lib32z1 lib32stdc++6
-
-RUN mkdir -p /usr/lib/android-sdk
-
-COPY ./sdk-tools-linux-4333796/ /usr/lib/android-sdk
-
-RUN yes | $ANDROID_HOME/tools/bin/sdkmanager  "platform-tools" "platforms;android-27" "build-tools;27.0.3"
-
-WORKDIR /usr/src
+RUN set -xe \
+	&& { \
+		echo '#!/bin/sh'; \
+		echo 'set -e'; \
+		echo; \
+		echo 'dirname "$(dirname "$(readlink -f "$(which javac || which java)")")"'; \
+	} > /usr/local/bin/docker-java-home \
+	&& chmod +x /usr/local/bin/docker-java-home \
+	&& INSTALL_TEMP="\
+		curl \
+		gcc  \
+		unzip " \
+	&& INSTALL="\
+		openjdk8-jre=8.181.13-r0 " \
+	&& apk add --no-cache --virtual .persistent-deps $INSTALL_TEMP $INSTALL \
+	&& NPM_INSTALL_GLOBAL="\
+	yarn \
+	react-native" \
+	&& npm i -g $NPM_INSTALL_GLOBAL \
+	&& curl -fsSL $URL_SDK_ANDROID -o /tmp/sdk.zip \
+	&& mkdir -p $ANDROID_HOME \
+	&& unzip /tmp/sdk.zip -d $ANDROID_HOME \
+	&& yes | $ANDROID_TOOLS/bin/sdkmanager  "platform-tools" "platforms;android-27" "build-tools;27.0.3" \
+	&& rm -rf /tmp/* \
+	&& apk del .persistent-deps $INSTALL_TEMP
